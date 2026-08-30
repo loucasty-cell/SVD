@@ -4,6 +4,16 @@ export interface DetectionScore {
   riskLevel: 'None' | 'Low' | 'Medium' | 'High' | 'Critical';
 }
 
+export interface ForensicMetrics {
+  decaySlopeGamma: number;
+  tailEnergyRatio: number;
+  frobeniusResidualRatio: number;
+  highFreqHarmonicPeak: number;
+  autocorrelationPeakRatio: number;
+  isGameOrRender: boolean;
+  isNaturalPhoto: boolean;
+}
+
 export interface FlaggedPattern {
   id: string;
   name: string;

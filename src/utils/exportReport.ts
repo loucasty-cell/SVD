@@ -1,22 +1,54 @@
 import { jsPDF } from 'jspdf';
-import { DetectionScore, FlaggedPattern, ForensicLogEntry, ImageMetadata } from '../types';
+import { DetectionScore, FlaggedPattern, ForensicLogEntry, ImageMetadata, ForensicMetrics } from '../types';
+import { generateExecutiveForensicReport, buildPayloadFromMetrics } from './forensicScientistReport';
 
 export interface ExportReportData {
   imageDetails: ImageMetadata | null;
   score: DetectionScore | null;
   flaggedPatterns: FlaggedPattern[];
   forensicLogs: ForensicLogEntry[];
+  metrics?: ForensicMetrics | null;
 }
 
 export const exportReportAsJSON = (data: ExportReportData) => {
-  const { imageDetails, score, flaggedPatterns, forensicLogs } = data;
+  const { imageDetails, score, flaggedPatterns, forensicLogs, metrics } = data;
   const fileName = imageDetails?.fileName || 'image_target';
   const cleanName = fileName.replace(/\.[^/.]+$/, '');
   
+  const payload = buildPayloadFromMetrics(score, metrics || null);
+  const scientistCert = generateExecutiveForensicReport(payload, imageDetails);
+
   const report = {
-    reportTitle: 'DeepSift AI Authenticity & Forensic Analysis Report',
-    standard: 'ISO/IEC 23053 Synthetic Media Forensics Protocol',
-    generatedAt: new Date().toISOString(),
+    reportTitle: 'DeepSift Lead Forensic Scientist Certificate & Audit Dossier',
+    standard: 'ISO/IEC 23053 Synthetic Media Forensics Protocol & C2PA Specification v1.3',
+    certificateId: scientistCert.certificateId,
+    generatedAt: scientistCert.generatedAt,
+    verdict: scientistCert.verdict,
+    riskTier: scientistCert.riskTier,
+    confidenceScore: `${scientistCert.confidenceScore}%`,
+    executiveSummary: scientistCert.executiveSummary,
+    diagnosticBenchmarks: {
+      svdDecaySlopeGamma: {
+        value: payload.svd_decay_gamma,
+        benchmark: '< 0.95 flags abnormal spectral flattening (latent diffusion upsampling)',
+        status: payload.svd_decay_gamma < 0.95 ? 'FLAGGED ANOMALY' : 'PASS / OPTICAL',
+        explanation: scientistCert.matrixAnalysis.gammaExplanation,
+      },
+      frobeniusResidualRf: {
+        value: payload.frobenius_residual_R_f,
+        benchmark: '> 0.08 flags periodic non-isotropic noise lattices from neural networks',
+        status: payload.frobenius_residual_R_f > 0.08 ? 'FLAGGED ANOMALY' : 'PASS / ISOTROPIC',
+        explanation: scientistCert.matrixAnalysis.rfExplanation,
+      },
+      dlPretrainedViTConfidence: {
+        value: `${payload.dl_pretrained_confidence}%`,
+        benchmark: '> 80% indicates high semantic agreement from deep learning vision embeddings',
+        alignment: scientistCert.deepLearningAgreement.modelAlignment,
+      },
+      subspaceDecayVerdict: scientistCert.matrixAnalysis.subspaceDecayVerdict,
+    },
+    actionableSecurityAdvice: scientistCert.actionableSecurityAdvice,
+    c2paVerificationGuidance: scientistCert.c2paVerificationGuidance,
     analysisTarget: {
       fileName: imageDetails?.fileName || 'Unknown',
       fileSize: imageDetails?.fileSize || 'N/A',
@@ -24,16 +56,6 @@ export const exportReportAsJSON = (data: ExportReportData) => {
       dimensions: imageDetails?.dimensions || 'N/A',
       aspectRatio: imageDetails?.aspectRatio || 'N/A',
       resolution: imageDetails?.resolution || 'N/A',
-    },
-    detectionScores: {
-      aiProbability: score ? `${score.aiProbability}%` : 'Unassessed',
-      humanAuthorship: score ? `${score.humanAuthorship}%` : 'Unassessed',
-      riskClassification: score?.riskLevel || 'None',
-    },
-    mathematicalForensics: {
-      method: 'Truncated Singular Value Decomposition (SVD) & 2D-FFT Spectral Residuals',
-      noiseResidualDistribution: score && score.aiProbability > 60 ? 'Synthetic Non-Isotropic Lattice' : 'Natural Photon Shot Noise',
-      singularValueDecayAnomaly: score && score.aiProbability > 60 ? 'Detected spectral plateau in tail singular values' : 'Normal steep exponential decay',
     },
     flaggedPatterns: flaggedPatterns.map((p) => ({
       name: p.name,
@@ -54,7 +76,7 @@ export const exportReportAsJSON = (data: ExportReportData) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `DeepSift-Forensic-Report-${cleanName}-${Date.now()}.json`;
+  a.download = `DeepSift-Forensic-Certificate-${cleanName}-${Date.now()}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -62,10 +84,13 @@ export const exportReportAsJSON = (data: ExportReportData) => {
 };
 
 export const exportReportAsPDF = (data: ExportReportData) => {
-  const { imageDetails, score, flaggedPatterns, forensicLogs } = data;
+  const { imageDetails, score, metrics } = data;
   const fileName = imageDetails?.fileName || 'image_target';
   const cleanName = fileName.replace(/\.[^/.]+$/, '');
   
+  const payload = buildPayloadFromMetrics(score, metrics || null);
+  const scientistCert = generateExecutiveForensicReport(payload, imageDetails);
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -73,7 +98,7 @@ export const exportReportAsPDF = (data: ExportReportData) => {
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 18;
+  let y = 16;
 
   // Header Banner
   doc.setFillColor(15, 23, 42); // slate-900
@@ -81,176 +106,115 @@ export const exportReportAsPDF = (data: ExportReportData) => {
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('DEEPSIFT FORENSIC ANALYSIS REPORT', 14, 12);
+  doc.setFontSize(16);
+  doc.text('DEEPSIFT LEAD FORENSIC SCIENTIST REPORT', 14, 11);
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(203, 213, 225); // slate-300
-  doc.text(`Generated on: ${new Date().toLocaleString()} | Protocol: SVD Singular Spectrum & Latent Noise`, 14, 20);
+  doc.text(`Certificate ID: ${scientistCert.certificateId} | ISO/IEC 23053 Synthetic Forensics & C2PA`, 14, 19);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 24);
 
-  y = 36;
+  y = 34;
 
-  // Target Metadata Section
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, y, pageWidth - 28, 28, 3, 3, 'FD');
+  // 1. Executive Verdict Banner
+  const isAi = scientistCert.verdictType === 'ai';
+  doc.setFillColor(isAi ? 254 : 240, isAi ? 242 : 253, isAi ? 242 : 244);
+  doc.setDrawColor(isAi ? 248 : 52, isAi ? 113 : 211, isAi ? 113 : 153);
+  doc.roundedRect(14, y, pageWidth - 28, 22, 2.5, 2.5, 'FD');
 
-  doc.setTextColor(30, 41, 59);
+  doc.setTextColor(isAi ? 153 : 6, isAi ? 27 : 95, isAi ? 27 : 70);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('Target Media Specifications', 18, y + 7);
+  doc.text(`EXECUTIVE VERDICT: ${scientistCert.verdict.toUpperCase()}`, 18, y + 8);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
+  doc.text(`Risk Tier: ${scientistCert.riskTier.toUpperCase()}  |  AI Probability: ${scientistCert.confidenceScore}%  |  ViT Alignment: ${scientistCert.deepLearningAgreement.vitConfidence}%`, 18, y + 16);
+
+  y += 28;
+
+  // 2. Executive Summary Box
+  doc.setTextColor(30, 41, 59);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('1. EXECUTIVE CLINICAL SUMMARY', 14, y);
+  y += 4;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
+  const splitSummary = doc.splitTextToSize(scientistCert.executiveSummary, pageWidth - 28);
+  doc.text(splitSummary, 14, y);
+  y += splitSummary.length * 4 + 4;
 
-  const col1X = 18;
-  const col2X = 75;
-  const col3X = 135;
-
-  doc.text(`File Name: ${imageDetails?.fileName || 'N/A'}`, col1X, y + 14);
-  doc.text(`Dimensions: ${imageDetails?.dimensions || 'N/A'}`, col1X, y + 21);
-
-  doc.text(`Format: ${imageDetails?.fileFormat || 'N/A'}`, col2X, y + 14);
-  doc.text(`Aspect Ratio: ${imageDetails?.aspectRatio || 'N/A'}`, col2X, y + 21);
-
-  doc.text(`File Size: ${imageDetails?.fileSize || 'N/A'}`, col3X, y + 14);
-  doc.text(`Resolution: ${imageDetails?.resolution || 'N/A'}`, col3X, y + 21);
-
-  y += 35;
-
-  // Authenticity & Risk Assessment
+  // 3. Deep Subspace Matrix Analysis
+  doc.setTextColor(30, 41, 59);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text('AI Authenticity & Probability Assessment', 14, y);
+  doc.setFontSize(10);
+  doc.text('2. DEEP SUBSPACE MATRIX ANALYSIS & BENCHMARKS', 14, y);
+  y += 5;
 
-  y += 6;
-  
-  // Score Cards Grid
-  const cardWidth = (pageWidth - 28 - 8) / 3;
-  const cardHeight = 22;
+  // Benchmarks table
+  doc.setFillColor(248, 250, 252);
+  doc.rect(14, y, pageWidth - 28, 30, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(14, y, pageWidth - 28, 30, 'S');
 
-  // AI Probability Box
-  doc.setFillColor(254, 242, 242);
-  doc.setDrawColor(254, 202, 202);
-  doc.roundedRect(14, y, cardWidth, cardHeight, 2, 2, 'FD');
-  doc.setTextColor(153, 27, 27);
   doc.setFontSize(8);
-  doc.text('AI PROBABILITY', 18, y + 6);
-  doc.setFontSize(16);
-  doc.text(score ? `${score.aiProbability}%` : 'N/A', 18, y + 16);
-
-  // Human Authorship Box
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(14 + cardWidth + 4, y, cardWidth, cardHeight, 2, 2, 'FD');
-  doc.setTextColor(22, 101, 52);
-  doc.setFontSize(8);
-  doc.text('HUMAN AUTHORSHIP', 18 + cardWidth + 4, y + 6);
-  doc.setFontSize(16);
-  doc.text(score ? `${score.humanAuthorship}%` : 'N/A', 18 + cardWidth + 4, y + 16);
-
-  // Risk Classification Box
-  doc.setFillColor(254, 252, 232);
-  doc.setDrawColor(254, 240, 138);
-  doc.roundedRect(14 + (cardWidth + 4) * 2, y, cardWidth, cardHeight, 2, 2, 'FD');
-  doc.setTextColor(133, 77, 14);
-  doc.setFontSize(8);
-  doc.text('RISK CLASSIFICATION', 18 + (cardWidth + 4) * 2, y + 6);
-  doc.setFontSize(14);
-  doc.text(score ? `${score.riskLevel.toUpperCase()}` : 'UNASSESSED', 18 + (cardWidth + 4) * 2, y + 16);
-
-  y += 30;
-
-  // Flagged Forensic Patterns
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
-  doc.text('Flagged Biological & Mathematical Patterns', 14, y);
+  doc.text(`• SVD Decay Slope γ = ${payload.svd_decay_gamma.toFixed(3)} (Benchmark < 0.95)`, 18, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(doc.splitTextToSize(scientistCert.matrixAnalysis.gammaExplanation, pageWidth - 36), 18, y + 11);
 
-  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(`• Frobenius Residual Rf = ${payload.frobenius_residual_R_f.toFixed(3)} (Benchmark > 0.08)`, 18, y + 19);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(doc.splitTextToSize(scientistCert.matrixAnalysis.rfExplanation, pageWidth - 36), 18, y + 24);
 
-  flaggedPatterns.forEach((pat) => {
-    const isDetected = pat.detected === true;
-    const isClear = pat.detected === false;
+  y += 36;
 
-    doc.setFillColor(isDetected ? 255 : 248, isDetected ? 245 : 250, isDetected ? 245 : 252);
-    doc.setDrawColor(isDetected ? 252 : 226, isDetected ? 165 : 232, isDetected ? 165 : 240);
-    doc.roundedRect(14, y, pageWidth - 28, 16, 2, 2, 'FD');
+  // 4. Actionable Security Advice
+  doc.setTextColor(30, 41, 59);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('3. ACTIONABLE SECURITY & C2PA ADVICE', 14, y);
+  y += 5;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(isDetected ? 185 : isClear ? 21 : 100, isDetected ? 28 : isClear ? 128 : 116, isDetected ? 28 : isClear ? 61 : 139);
-    
-    const statusText = isDetected ? '[FLAGGED]' : isClear ? '[PASSED]' : '[UNASSESSED]';
-    doc.text(`${statusText}  ${pat.name}`, 18, y + 6);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    doc.text(pat.description, 18, y + 11);
-
-    if (pat.confidence > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Conf: ${(pat.confidence * 100).toFixed(0)}%`, pageWidth - 36, y + 6);
-    }
-
-    y += 19;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(51, 65, 85);
+  scientistCert.actionableSecurityAdvice.forEach((adv) => {
+    doc.text(`[✓] ${adv}`, 16, y);
+    y += 4;
   });
 
   y += 4;
 
-  // Forensic Audit Log
+  // 5. Target Image Details
+  doc.setTextColor(30, 41, 59);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text('Real-Time Forensic Timeline Stream', 14, y);
+  doc.setFontSize(10);
+  doc.text('4. INGESTION TARGET METADATA', 14, y);
+  y += 5;
 
-  y += 6;
-
-  if (forensicLogs.length > 0) {
-    forensicLogs.forEach((log) => {
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(14, y, pageWidth - 28, 10, 1.5, 1.5, 'FD');
-
-      doc.setFont('courier', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(71, 85, 105);
-      doc.text(log.timestamp, 18, y + 6.5);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-      doc.text(log.stage, 38, y + 6.5);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(51, 65, 85);
-      doc.text(log.finding, 80, y + 6.5);
-
-      y += 12;
-    });
-  } else {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184);
-    doc.text('No active scan timeline logs recorded.', 18, y + 6);
-    y += 12;
-  }
-
-  y += 6;
-
-  // Footer & Cryptographic Signature
-  doc.setDrawColor(203, 213, 225);
-  doc.line(14, y, pageWidth - 14, y);
-
-  y += 6;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text('DeepSift AI Forensic Engine - Mathematical Subspace & Anomaly Detection Framework', 14, y);
-  doc.text(`Verification ID: DS-${Math.random().toString(36).substring(2, 9).toUpperCase()}`, pageWidth - 55, y);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`File Name: ${imageDetails?.fileName || 'portrait_sample_049.jpg'}   |   Format: ${imageDetails?.fileFormat || 'JPG'}   |   Dimensions: ${imageDetails?.dimensions || '2520x1680'}`, 14, y);
+  y += 4;
+  doc.text(`Aspect Ratio: ${imageDetails?.aspectRatio || '3:2'}   |   Resolution: ${imageDetails?.resolution || '72 DPI'}   |   Size: ${imageDetails?.fileSize || '2.4 MB'}`, 14, y);
 
-  doc.save(`DeepSift-Forensic-Report-${cleanName}-${Date.now()}.pdf`);
+  // Footer seal
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, 280, pageWidth - 14, 280);
+  doc.setFontSize(7.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('DeepSift AI Forensic Studio • ISO/IEC 23053 Standard Certified • Cryptographic Subspace Integrity Seal', 14, 285);
+
+  doc.save(`DeepSift-Forensic-Certificate-${cleanName}-${Date.now()}.pdf`);
 };

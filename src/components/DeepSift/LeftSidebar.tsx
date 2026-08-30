@@ -18,29 +18,28 @@ const PillRow = ({
   total = 30,
   colorClass,
   label,
-  tooltipPos,
 }: {
   count: number;
   total?: number;
   colorClass: string;
   label: string;
-  tooltipPos: string;
 }) => (
-  <div className="relative flex gap-1 items-center w-full mb-7 group">
-    {Array.from({ length: total }).map((_, i) => (
-      <div
-        key={i}
-        className={`h-3 flex-1 rounded-full transition-all duration-500 ${
-          i < count ? colorClass : 'bg-white/30 border border-white/20'
-        }`}
-      />
-    ))}
-    {/* Tooltip */}
-    <div
-      className={`absolute ${tooltipPos} bg-white/95 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-bold text-slate-800 shadow-xl whitespace-nowrap z-20 border border-slate-100 flex items-center gap-1.5 pointer-events-none`}
-    >
-      <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-      {label}
+  <div className="flex flex-col gap-1.5 w-full">
+    <div className="flex gap-1 items-center w-full">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-2.5 flex-1 rounded-full transition-all duration-500 ${
+            i < count ? colorClass : 'bg-slate-200/80 border border-slate-300/30'
+          }`}
+        />
+      ))}
+    </div>
+    <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-800 px-0.5">
+      <div className="flex items-center gap-2">
+        <span className={`w-2.5 h-2.5 rounded-full ${colorClass}`} />
+        <span className="font-semibold text-xs sm:text-sm text-slate-800">{label}</span>
+      </div>
     </div>
   </div>
 );
@@ -145,7 +144,7 @@ export const LeftSidebar = ({
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-600" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">AI Probability Score</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">AI Probability Score</h3>
           </div>
           <button
             onClick={handleExportPDF}
@@ -157,24 +156,21 @@ export const LeftSidebar = ({
           </button>
         </div>
 
-        <div className="pt-1">
+        <div className="flex flex-col gap-3.5 pt-1">
           <PillRow
             count={aiPillCount}
             colorClass="bg-[#ff7b54]"
             label={hasScore ? `${score.aiProbability}% AI Detected` : 'Awaiting Ingestion'}
-            tooltipPos="-bottom-7 left-1/2 transform -translate-x-1/2"
           />
           <PillRow
             count={humanPillCount}
             colorClass="bg-[#5cc57a]"
             label={hasScore ? `${score.humanAuthorship}% Human Authorship` : 'Awaiting Ingestion'}
-            tooltipPos="-bottom-7 left-1/4 transform -translate-x-1/2"
           />
           <PillRow
             count={riskPillCount}
             colorClass="bg-[#facc15]"
-            label={hasScore ? `Risk: ${score.riskLevel}` : 'Risk: Unassessed'}
-            tooltipPos="-bottom-7 left-1/2 transform -translate-x-1/2"
+            label={hasScore ? `Risk: ${score.riskLevel}` : 'Risk: Awaiting Ingestion'}
           />
         </div>
       </GlassCard>
@@ -184,7 +180,7 @@ export const LeftSidebar = ({
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-slate-700" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Origin Report</h3>
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">Origin Report</h3>
           </div>
           <button
             onClick={handleExportPDF}
@@ -225,7 +221,7 @@ export const LeftSidebar = ({
           </div>
         )}
 
-        <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
           Flagged Patterns
         </h4>
 
