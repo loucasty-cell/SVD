@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DeepSift - AI Detection & Forensic Analysis</title>
+    <meta name="description" content="AI-generated pattern detection, probability scoring, origin verification, and forensic audit platform." />
+    <meta property="og:title" content="DeepSift - AI Detection & Forensic Analysis" />
+    <meta property="og:description" content="AI-generated pattern detection, probability scoring, origin verification, and forensic audit platform." />
+    <script>
+      // Catch benign container websocket disconnect rejections
+      window.addEventListener('unhandledrejection', function(event) {
+        if (
+          event.reason &&
+          (String(event.reason).includes('WebSocket') ||
+            String(event.reason.message || '').includes('WebSocket') ||
+            String(event.reason).includes('closed without opened'))
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
+      window.addEventListener('error', function(event) {
+        if (
+          event.message &&
+          (event.message.includes('WebSocket') ||
+            event.message.includes('closed without opened'))
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
+
+      // Defensive setter patch for environments where window.fetch has only a getter
+      (function() {
+        try {
+          var _currentFetch = window.fetch ? window.fetch.bind(window) : null;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _currentFetch;
+            },
+            set: function(fn) {
+              _currentFetch = fn;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          // Pass silently if already configured
+        }
+      })();
+    </script>
+  </head>
+  <body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

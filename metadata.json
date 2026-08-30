@@ -1,0 +1,6 @@
+{
+  "name": "DeepSift - AI Detection & Forensic Analysis",
+  "description": "AI-generated pattern detection, probability scoring, origin verification, and forensic audit platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
